@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0.3">
+<procedure name="main">
+<interface/>
+<body>
+<c>* To extract the region of particle defect, call procedure "Find_Defect_Region_ForParticle()"</c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="Defect_Extraction_Algorithm_1">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+<par name="ImageRef" base_type="iconic" dimension="0"/>
+<par name="RegionRef" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="RegionDefect" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c></c>
+<c>******** Find the signed image (+, -) by subtract the image between "Defect" image and "No Defect" image ***********</c>
+<l>convert_image_type (ImageIn,  ImageConverted1, 'int2')</l>
+<l>convert_image_type (ImageRef, ImageConverted2, 'int2')</l>
+<l>gain := 1.8</l>
+<l>offset := 0</l>
+<l>sub_image (ImageConverted1, ImageConverted2, ImageSub, gain, offset)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>******************************* Find region from using "Double-Threshold" method ***************************************</c>
+<c>* The area(s) which gray-value are crossing over the 2 threshold values (Base + T, Base - T) , will be the output region(s)</c>
+<l>Threshold_BinaryImage := 52</l>
+<l>BaseGrayValue := 120</l>
+<l>dual_threshold (ImageSub, RegionCrossings, 5, BaseGrayValue, Threshold_BinaryImage)</l>
+<c></c>
+<l>dev_set_color ('pink')</l>
+<l>dev_display (ImageIn)</l>
+<l>dev_display (RegionCrossings)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>****************** Filtering a non-defect parts from the resulted XOR image *********************</c>
+<c>* Connecting all the regions to create sub-part regions </c>
+<l>connection   (RegionCrossings, ConnectedRegions)</l>
+<l>compactness (ConnectedRegions, Compactness)</l>
+<l>convexity   (ConnectedRegions, Convexity)</l>
+<l>roundness   (ConnectedRegions, Distance, Sigma, Roundness, Sides)</l>
+<l>area_center (ConnectedRegions, Area, Row, Column)</l>
+<c></c>
+<c>* Filtering using "area"</c>
+<l>area_min := 20</l>
+<l>area_max := 7000</l>
+<l>roundness_min := 0.6</l>
+<l>roundness_max := 1.0</l>
+<l>convexity_threshold := 0.55</l>
+<l>select_shape (ConnectedRegions, FilteredRegions_Area, 'area', 'and', area_min, 8000)</l>
+<l>select_shape (FilteredRegions_Area, FilteredRegions_Area_or_Roundness, ['area', 'roundness'], 'or', [area_min, roundness_min], [area_max, roundness_max])</l>
+<l>select_shape (FilteredRegions_Area_or_Roundness, FilteredRegions_HoleFalseDetect, ['area', 'convexity'], 'and', [400, 0], [1500, convexity_threshold])</l>
+<l>difference (FilteredRegions_Area_or_Roundness, FilteredRegions_HoleFalseDetect, FilteredRegions)</l>
+<c></c>
+<l>dev_display( ImageIn )</l>
+<l>dev_display( FilteredRegions )</l>
+<c></c>
+<c>* Find a neighbor region of the input .hobj file </c>
+<l>find_neighbors (RegionRef, FilteredRegions, 6, RegionIndex1, RegionIndex2)</l>
+<l>select_obj (FilteredRegions, FilteredRegion, RegionIndex2)</l>
+<c></c>
+<l>dev_display (ImageIn)</l>
+<l>dev_display (FilteredRegion)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>******************** Erosion to eliminate some error from registration ***********************</c>
+<l>area_center (FilteredRegion, DefectArea, Row, Column)</l>
+<l>min_area_for_erosion := 50</l>
+<l>if(DefectArea &gt; min_area_for_erosion)</l>
+<l>    * erosion_circle (FilteredRegion, FilteredRegion, 1.0)</l>
+<l>    erosion_rectangle1 (FilteredRegion, FilteredRegion, 1, 1)</l>
+<l>endif</l>
+<c></c>
+<l>dev_display( ImageIn )</l>
+<l>dev_display( FilteredRegion )</l>
+<c></c>
+<c></c>
+<c></c>
+<l>union1 (FilteredRegion, FilteredRegion)</l>
+<l>RegionDefect := FilteredRegion</l>
+<l>return ()</l>
+<c></c>
+<c></c>
+</body>
+<docu id="Defect_Extraction_Algorithm_1">
+<parameters>
+<parameter id="ImageIn"/>
+<parameter id="ImageRef"/>
+<parameter id="RegionDefect"/>
+<parameter id="RegionRef"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Defect_Extraction_Algorithm_2">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+<par name="ImageRef" base_type="iconic" dimension="0"/>
+<par name="RegionRef" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="RegionDefect" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c></c>
+<c>*********************** Grayscale-to-Binary by using Single-Threshold method ***********************</c>
+<c>* Find region of gray-value thresholding</c>
+<l>binary_threshold (ImageIn,  RegionThreshold_In,  'smooth_histo', 'dark', UsedThreshold_In)</l>
+<l>binary_threshold (ImageRef, RegionThreshold_Ref, 'smooth_histo', 'dark', UsedThreshold_Ref)</l>
+<c></c>
+<l>threshold (ImageIn,  RegionThreshold_In,  0, UsedThreshold_In  + 10)</l>
+<l>threshold (ImageRef, RegionThreshold_Ref, 0, UsedThreshold_Ref + 10)</l>
+<c></c>
+<c>* Generate Binary Image</c>
+<l>get_image_size   (ImageIn, Width, Height)</l>
+<l>region_to_bin (RegionThreshold_In,  BinImage_In,  0, 255, Width, Height)</l>
+<l>region_to_bin (RegionThreshold_Ref, BinImage_Ref, 0, 255, Width, Height)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>****************** Apply XOR operator between "not defected" &amp; "defected image" ******************</c>
+<c>* XOR output as "image"</c>
+<l>bit_xor (BinImage_In, BinImage_Ref, Image_Xor)</l>
+<c></c>
+<c>* XOR output as "region"</c>
+<c>* There's no XOR set operator. So, try to XOR by using -&gt; (A &amp; !B) || (!A &amp; B)</c>
+<l>copy_obj (RegionThreshold_In,  A, 1, 1)</l>
+<l>copy_obj (RegionThreshold_Ref, B, 1, 1)</l>
+<l>complement (RegionThreshold_In,  A_Complimented)</l>
+<l>complement   (RegionThreshold_Ref, B_Complimented)</l>
+<l>intersection (A, B_Complimented, tmp1)</l>
+<l>intersection (A_Complimented, B, tmp2)</l>
+<l>union2 (tmp1, tmp2, Region_Xor)</l>
+<c></c>
+<l>dev_set_color('orange')</l>
+<l>dev_display (Image_Xor)</l>
+<l>dev_display (Region_Xor)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>****************** Filtering a non-defect parts from the resulted XOR image *********************</c>
+<c>* Connecting all the regions to create sub-part regions </c>
+<l>connection   (Region_Xor, ConnectedRegions)</l>
+<c>* Filtering using "area"</c>
+<l>min_area := 10</l>
+<l>max_area := 2000</l>
+<l>select_shape (ConnectedRegions, FilteredRegions, 'area', 'and', min_area, max_area)</l>
+<c></c>
+<l>* convexity   (ConnectedRegions, Convexity)</l>
+<l>* roundness   (ConnectedRegions, Distance, Sigma, Roundness, Sides)</l>
+<l>* area_center (ConnectedRegions, Area, Row, Column)</l>
+<c></c>
+<l>dev_display( ImageIn )</l>
+<l>dev_display( FilteredRegions )</l>
+<c></c>
+<c>* Find a neighbor region of the input .hobj file </c>
+<l>find_neighbors (RegionRef, FilteredRegions, 1, RegionIndex1, RegionIndex2)</l>
+<l>select_obj (FilteredRegions, FilteredRegion, RegionIndex2)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>******************** Erosion to eliminate some error from registration ***********************</c>
+<l>area_center (FilteredRegion, DefectArea, Row, Column)</l>
+<l>min_area_for_erosion := 60</l>
+<l>if(DefectArea &gt; min_area_for_erosion)</l>
+<l>    * erosion_circle (FilteredRegion, FilteredRegion, 1.0)</l>
+<l>    erosion_rectangle1 (FilteredRegion, FilteredRegion, 1, 1)</l>
+<l>endif</l>
+<c></c>
+<c></c>
+<c></c>
+<l>dev_display (ImageIn)</l>
+<l>dev_display (FilteredRegion)</l>
+<l>RegionDefect := FilteredRegion</l>
+<l>return ()</l>
+</body>
+<docu id="Defect_Extraction_Algorithm_2">
+<parameters>
+<parameter id="ImageIn"/>
+<parameter id="ImageRef"/>
+<parameter id="RegionDefect"/>
+<parameter id="RegionRef"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Find_Defect_Region_ForParticle">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+<par name="ImageRef" base_type="iconic" dimension="0"/>
+<par name="DefectRegionIn" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="DefectRegionOut" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c>* </c>
+<c>* ************************** Apply a smoothing filter to the image ******************************</c>
+<l>* gauss_filter (ImageIn, ImageIn_Filtered, 3)</l>
+<l>* gauss_filter (ImageRef, ImageRef_Filtered, 3)</l>
+<l>copy_image (ImageIn, ImageIn_Filtered)</l>
+<l>copy_image (ImageRef, ImageRef_Filtered)</l>
+<c>* </c>
+<c>* </c>
+<c>* ********************* Region Extraction using 2 difference algorithms ***************************</c>
+<c>* Display the input</c>
+<l>dev_set_color ('red')</l>
+<l>dev_display (ImageIn)</l>
+<l>dev_display (DefectRegionIn)</l>
+<c>* </c>
+<l>Defect_Extraction_Algorithm_1 (ImageIn_Filtered, ImageRef_Filtered, DefectRegionIn, RegionDefectOut_1)</l>
+<l>Defect_Extraction_Algorithm_2 (ImageIn_Filtered, ImageRef_Filtered, DefectRegionIn, RegionDefectOut_2)</l>
+<c>* </c>
+<c>* Combine both resulted regions as "Defect"</c>
+<l>union2 (RegionDefectOut_1, RegionDefectOut_2, RegionDefectOut)</l>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* ********** Customize the region for the better result (erosion, noise filtering etc.) **********</c>
+<l>area_center (RegionDefectOut, DefectArea, Row, Column)</l>
+<l>min_area_for_erosion := 80</l>
+<l>if (DefectArea &gt; min_area_for_erosion)</l>
+<l>    erosion_rectangle1 (RegionDefectOut, RegionDefectOut, 2, 2)</l>
+<l>endif</l>
+<c>* </c>
+<l>remove_noise_region (RegionDefectOut, RegionDefectOut, 'n_8')</l>
+<l>connection (RegionDefectOut, ConnectedRegions)</l>
+<l>select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', 5, 5000)</l>
+<l>union1 (SelectedRegions, RegionDefectOut)</l>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<l>dev_display (ImageIn)</l>
+<l>dev_set_color ('green')</l>
+<l>dev_display (RegionDefectOut_1)</l>
+<l>dev_set_color ('blue')</l>
+<l>dev_display (RegionDefectOut_2)</l>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* Display the output</c>
+<l>dev_display (ImageIn)</l>
+<l>dev_set_color ('yellow')</l>
+<l>dev_display (RegionDefectOut)</l>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<l>DefectRegionOut := RegionDefectOut</l>
+<l>return ()</l>
+</body>
+<docu id="Find_Defect_Region_ForParticle">
+<parameters>
+<parameter id="DefectRegionIn"/>
+<parameter id="DefectRegionOut"/>
+<parameter id="ImageIn">
+<description lang="en_US">This procedure is used to extract the region of defect.
+Still being tested on only particle images.</description>
+</parameter>
+<parameter id="ImageRef"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>

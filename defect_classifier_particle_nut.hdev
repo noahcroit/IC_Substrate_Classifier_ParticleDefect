@@ -1,0 +1,1153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0.3">
+<procedure name="main">
+<interface/>
+<body>
+<c></c>
+<c></c>
+<c>* Assign each classifier type a unique number so that we can identify it.</c>
+<l>ClassifierSVM := 1</l>
+<l>ClassifierMLP := 2</l>
+<l>ClassifierGMM := 3</l>
+<l>ClassifierKNN := 4</l>
+<c></c>
+<c>* Choose the folders that contain images of false detects.</c>
+<l>ovst_get_input_folders ('Choose False Defect Folders', FalseInputFolders)</l>
+<c></c>
+<c>* Choose the folders that contain images of true defects.</c>
+<l>ovst_get_input_folders ('Choose True Defect Folders', TrueInputFolders)</l>
+<c></c>
+<l>dev_close_window ()</l>
+<l>dev_open_window (0, 0, 512, 512, 'black', WindowHandle)</l>
+<l>set_font (WindowHandle, '-Courier New-15-*-*-*-*-1-')</l>
+<c></c>
+<c>* Delete the old log files if they are already exist to prevent from overwriting.</c>
+<l>file_exists ('log.csv', IsFileExists)</l>
+<l>if(IsFileExists == 1)</l>
+<l>    delete_file ('log.csv')    </l>
+<l>endif</l>
+<l>file_exists ('log.csv', IsFileExists)</l>
+<l>if(IsFileExists == 1)</l>
+<l>    delete_file ('log.csv')</l>
+<l>endif</l>
+<l>* dev_close_window ()</l>
+<l>* dev_update_window ('off')</l>
+<c></c>
+<c>*=========================================================</c>
+<c>* SVM Classifier</c>
+<c>*=========================================================</c>
+<l>ClassNames := ['False Defect','True Defect']</l>
+<l>number_of_features := 11</l>
+<l>NuArr := [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2]</l>
+<l>GammaArr := [0.01, 0.02, 0.05, 0.1, 0.5]</l>
+<l>count := 0</l>
+<c></c>
+<c>* Train with only half the available samples.  Set to 0 to train with all samples.</c>
+<l>UseHalfSamples := 1</l>
+<c></c>
+<l>for i := 0 to |NuArr|-1 by 1</l>
+<l>    for j := 0 to |GammaArr|-1 by 1</l>
+<c></c>
+<l>        Nu := NuArr[i]</l>
+<l>        KernelParam := GammaArr[j]</l>
+<c>                 </c>
+<c>        * create the classifier</c>
+<l>        create_class_svm (number_of_features, 'rbf', KernelParam, Nu, |ClassNames|, 'one-versus-all', 'principal_components', 10, SVMHandle)</l>
+<c>        </c>
+<c>        * Add samples of false defects</c>
+<l>        ovst_add_sample_classifier (SVMHandle, FalseInputFolders, 0, ClassifierSVM, UseHalfSamples)</l>
+<c>        </c>
+<c>        * Add samples of true defects</c>
+<l>        ovst_add_sample_classifier (SVMHandle, TrueInputFolders, 1, ClassifierSVM, UseHalfSamples)</l>
+<c>        </c>
+<c>        * Train the classifier</c>
+<l>        train_class_svm (SVMHandle, 0.001, 'default')</l>
+<c>        </c>
+<c>        * Test the classifier with samples of false defects</c>
+<l>        ovst_test_classifier (SVMHandle, FalseInputFolders, 0, ClassifierSVM, count_false_defect_pass, count_false_defect_fail)</l>
+<c>        </c>
+<c>        * Test the classifier with samples of true defects</c>
+<l>        ovst_test_classifier (SVMHandle, TrueInputFolders,  1, ClassifierSVM, count_true_defect_pass,  count_true_defect_fail)</l>
+<c></c>
+<l>        *set_tposition(WindowHandle, 5 + 30*count, 5 ) </l>
+<l>        *count := count + 1     </l>
+<l>        *set_tposition(WindowHandle, 5, 5 )            </l>
+<l>        *write_string(WindowHandle, 'SVM : Nu = ' + Nu + ' KernelParam = ' + KernelParam)            </l>
+<c>        </c>
+<c>        * calculate the accuracy and precision score in the binary classification </c>
+<l>        TP := count_false_defect_pass</l>
+<l>        FP := count_false_defect_fail</l>
+<l>        TN := count_true_defect_pass</l>
+<l>        FN := count_true_defect_fail</l>
+<l>        tuple_real (TP, TP)</l>
+<l>        tuple_real (FP, FP)</l>
+<l>        tuple_real (TN, TN)</l>
+<l>        tuple_real (FN, FN)</l>
+<l>        accuracy  := (TP + TN) / (TP + TN + FP + FN)</l>
+<l>        precision := TP / (TP + FP)</l>
+<c>        </c>
+<l>        open_file('log.csv', 'append', FileHandle)</l>
+<l>        *fwrite_string(FileHandle, ['SVM', 'Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, ', Nu, ', Nu, ', KernelParam, ', KernelParam])</l>
+<l>        *fwrite_string(FileHandle, ['SVM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', TN, ', count_false_defect_pass, ', FN, ', count_false_defect_fail, ', TP, ', count_true_defect_pass, ', FP, ', count_true_defect_fail, ', Nu, ', Nu, ', KernelParam, ', KernelParam])</l>
+<l>        fwrite_string(FileHandle, ['SVM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
+                           ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
+                           ', Nu, ', Nu, ', KernelParam, ', KernelParam])</l>
+<l>        fnew_line(FileHandle)</l>
+<l>        close_file(FileHandle)        </l>
+<c>            </c>
+<l>        clear_class_svm(SVMHandle)     </l>
+<l>    endfor</l>
+<l>endfor</l>
+<c></c>
+<c></c>
+<c>*=========================================================</c>
+<c>* MLP Classifier</c>
+<c>*=========================================================</c>
+<l>MaxNumInput  := 11</l>
+<l>MaxNumHidden := 10</l>
+<l>MaxNumOutput := 2</l>
+<l>count := 0</l>
+<c></c>
+<c>* Train with only half the available samples.  Set to 0 to train with all samples.</c>
+<l>UseHalfSamples := 1</l>
+<c></c>
+<l>for numInput := 11 to MaxNumInput by 1</l>
+<l>    for numHidden := 3 to MaxNumHidden by 1</l>
+<l>        for numOutput := 2 to MaxNumOutput by 1            </l>
+<c>            * create the classifier</c>
+<l>            create_class_mlp (numInput, numHidden, numOutput, 'softmax', 'principal_components', 11, 42, MLPHandle)</l>
+<c>            </c>
+<c>            * Add samples of false defects</c>
+<l>            ovst_add_sample_classifier (MLPHandle, FalseInputFolders, 0, ClassifierMLP, UseHalfSamples)</l>
+<c>            </c>
+<c>            * Add samples of true defects</c>
+<l>            ovst_add_sample_classifier (MLPHandle, TrueInputFolders, 1, ClassifierMLP, UseHalfSamples)</l>
+<c>            </c>
+<c>            * Train the classifier</c>
+<l>            train_class_mlp (MLPHandle, 200, 1, 0.01, Error, ErrorLog)</l>
+<c>            </c>
+<c>            * Test the classifier with samples of false defects</c>
+<l>            ovst_test_classifier (MLPHandle, FalseInputFolders, 0, ClassifierMLP, count_false_defect_pass, count_false_defect_fail)</l>
+<c>            </c>
+<c>            * Test the classifier with samples of true defects</c>
+<l>            ovst_test_classifier (MLPHandle, TrueInputFolders, 1, ClassifierMLP, count_true_defect_pass, count_true_defect_fail)</l>
+<c>    </c>
+<l>            *set_tposition(WindowHandle, 5, 5 )              </l>
+<l>            *set_tposition(WindowHandle, 5 + 30*count, 5 )  </l>
+<l>            *count := count + 1                     </l>
+<l>            *write_string(WindowHandle, 'MLP : numInput = ' + numInput + ' numHidden = ' + numHidden + ' numOutput ' + numOutput)</l>
+<c>             </c>
+<c>            * calculate the accuracy and precision score in the binary classification </c>
+<l>            TP := count_false_defect_pass</l>
+<l>            FP := count_false_defect_fail</l>
+<l>            TN := count_true_defect_pass</l>
+<l>            FN := count_true_defect_fail</l>
+<l>            tuple_real (TP, TP)</l>
+<l>            tuple_real (FP, FP)</l>
+<l>            tuple_real (TN, TN)</l>
+<l>            tuple_real (FN, FN)</l>
+<l>            accuracy  := (TP + TN) / (TP + TN + FP + FN)</l>
+<l>            precision := TP / (TP + FP)</l>
+<c>            </c>
+<l>            open_file('log.csv', 'append', FileHandle)</l>
+<l>            *fwrite_string(FileHandle, ['MLP', 'Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, ', numInput, ', numInput, ', numHidden, ', numHidden, ', numOuput, ', numOutput])</l>
+<l>            *fwrite_string(FileHandle,  ['MLP', ', Accuracy, ', accuracy, ', Precision, ', precision, ', TN, ', count_false_defect_pass, ', FN, ', count_false_defect_fail, ', TP, ', count_true_defect_pass, ', FP, ', count_true_defect_fail, ', numInput, ', numInput, ', numHidden, ', numHidden, ', numOuput, ', numOutput])</l>
+<l>             fwrite_string(FileHandle, ['MLP', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
+                                       ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
+                                       ', numInput, ', numInput, ', numHidden, ', numHidden, ', numOuput, ', numOutput])</l>
+<l>            fnew_line(FileHandle)</l>
+<l>            close_file(FileHandle)</l>
+<c>        </c>
+<l>            clear_class_mlp(MLPHandle)             </l>
+<l>        endfor    </l>
+<l>    endfor</l>
+<l>endfor</l>
+<c></c>
+<c>*=========================================================</c>
+<c>* GMM Classifier</c>
+<c>*=========================================================</c>
+<l>* MaxNumDim := 11</l>
+<l>* MaxNumClasses := 2</l>
+<l>* MaxNumCenters := 3</l>
+<l>* count := 0</l>
+<c></c>
+<c>* Train with only half the available samples.  Set to 0 to train with all samples.</c>
+<l>* UseHalfSamples := 0</l>
+<c></c>
+<l>* for numDim := 11 to MaxNumDim by 1</l>
+<l>*     for numClasses := 2 to MaxNumClasses by 1</l>
+<l>*         for numCenters := 1 to MaxNumCenters by 2      </l>
+<c>            * create the classifier</c>
+<l>*             create_class_gmm (numDim, numClasses, numCenters, 'full', 'none', 11, 42, GMMHandle)</l>
+<c>            </c>
+<c>            * Add samples of false defects</c>
+<l>*             ovst_add_sample_classifier (GMMHandle, FalseInputFolders, 0, ClassifierGMM, UseHalfSamples)</l>
+<c>            </c>
+<c>            * Add samples of true defects</c>
+<l>*             ovst_add_sample_classifier (GMMHandle, TrueInputFolders, 1, ClassifierGMM, UseHalfSamples)</l>
+<c>            </c>
+<c>            * Train the classifier           </c>
+<l>*             train_class_gmm (GMMHandle, 100, 0.001, 'training', 1e-4, Centers, Iter)</l>
+<c>                 </c>
+<c>            * Test the classifier with samples of false defects</c>
+<l>*             ovst_test_classifier (GMMHandle, FalseInputFolders, 0, ClassifierGMM, count_false_defect_pass, count_false_defect_fail)</l>
+<c>            </c>
+<c>            * Test the classifier with samples of true defects</c>
+<l>*             ovst_test_classifier (GMMHandle, TrueInputFolders, 1, ClassifierGMM, count_true_defect_pass, count_true_defect_fail)</l>
+<c>    </c>
+<l>*             set_tposition(WindowHandle, 5, 5 )  </l>
+<l>*             set_tposition(WindowHandle, 5 + 30*count, 5 )  </l>
+<l>*             count := count + 1</l>
+<l>*             write_string(WindowHandle, 'GMM : numDim = ' + numDim + ' numClasses = ' + numClasses + ' numCenters ' + numCenters) </l>
+<c>             </c>
+<c>            * calculate the accuracy and precision score in the binary classification </c>
+<l>*             TP := count_false_defect_pass</l>
+<l>*             FP := count_false_defect_fail</l>
+<l>*             TN := count_true_defect_pass</l>
+<l>*             FN := count_true_defect_fail</l>
+<l>*             tuple_real (TP, TP)</l>
+<l>*             tuple_real (FP, FP)</l>
+<l>*             tuple_real (TN, TN)</l>
+<l>*             tuple_real (FN, FN)</l>
+<l>*             accuracy  := (TP + TN) / (TP + TN + FP + FN)</l>
+<l>*             precision := TP / (TP + FP)</l>
+<c>            </c>
+<l>*             open_file('log.csv', 'append', FileHandle)</l>
+<l>*             fwrite_string(FileHandle, ['GMM', 'Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, ', numDim, ', numDim, ', numClasses, ', numClasses, ', numCenters, ', numCenters])</l>
+<l>*             fwrite_string(FileHandle, ['GMM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', TN, ', count_false_defect_pass, ', FN, ', count_false_defect_fail, ', TP, ', count_true_defect_pass, ', FP, ', count_true_defect_fail, ', numDim, ', numDim, ', numClasses, ', numClasses, ', numCenters, ', numCenters])</l>
+<l>*               fwrite_string(FileHandle, ['GMM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
+                                         ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
+                                         ', numDim, ', numDim, ', numClasses, ', numClasses, ', numCenters, ', numCenters])</l>
+<l>*             fnew_line(FileHandle)</l>
+<l>*             close_file(FileHandle)</l>
+<c>        </c>
+<l>*             clear_class_gmm(GMMHandle)             </l>
+<l>*         endfor    </l>
+<l>*     endfor</l>
+<l>* endfor</l>
+<c></c>
+<c>*=========================================================</c>
+<c>* KNN Classifier</c>
+<c>*=========================================================</c>
+<l>k_max := 21</l>
+<l>k_min := 3</l>
+<l>numDim := 11</l>
+<l>count := 0</l>
+<c></c>
+<c>* Train with only half the available samples.  Set to 0 to train with all samples.</c>
+<l>UseHalfSamples := 1</l>
+<c></c>
+<l>for k := k_min to k_max by 2           </l>
+<c>       </c>
+<c>    * create the classifier</c>
+<l>    create_class_knn (numDim, KNNHandle)</l>
+<c>    </c>
+<c>    * Set properties of k-NN</c>
+<l>    set_params_class_knn (KNNHandle, ['method','k','max_num_classes'], ['classes_distance',5,1])</l>
+<c>    * Add samples of false defects</c>
+<l>    ovst_add_sample_classifier (KNNHandle, FalseInputFolders, 0, ClassifierKNN, UseHalfSamples)</l>
+<c>    </c>
+<c>    * Add samples of true defects</c>
+<l>    ovst_add_sample_classifier (KNNHandle, TrueInputFolders, 1, ClassifierKNN, UseHalfSamples)</l>
+<c>    </c>
+<c>    * Train the classifier    </c>
+<l>    train_class_knn (KNNHandle, [], [])</l>
+<c>    </c>
+<c>    * Test the classifier with samples of false defects</c>
+<l>    ovst_test_classifier (KNNHandle, FalseInputFolders, 0, ClassifierKNN, count_false_defect_pass, count_false_defect_fail)</l>
+<c>    </c>
+<c>    * Test the classifier with samples of true defects</c>
+<l>    ovst_test_classifier (KNNHandle, TrueInputFolders, 1, ClassifierKNN, count_true_defect_pass, count_true_defect_fail)</l>
+<c></c>
+<l>    *set_tposition(WindowHandle, 5, 5 ) </l>
+<l>    *set_tposition(WindowHandle, 5 + 30*count, 5 )  </l>
+<l>    *count := count + 1</l>
+<l>    *write_string(WindowHandle, 'KNN : k = ' + k)</l>
+<c>    * calculate the accuracy and precision score in the binary classification    </c>
+<l>    TP := count_false_defect_pass</l>
+<l>    FP := count_false_defect_fail</l>
+<l>    TN := count_true_defect_pass</l>
+<l>    FN := count_true_defect_fail</l>
+<l>    tuple_real (TP, TP)</l>
+<l>    tuple_real (FP, FP)</l>
+<l>    tuple_real (TN, TN)</l>
+<l>    tuple_real (FN, FN)</l>
+<l>    accuracy  := (TP + TN) / (TP + TN + FP + FN)</l>
+<l>    precision := TP / (TP + FP)</l>
+<c>    </c>
+<l>    open_file('log.csv', 'append', FileHandle)</l>
+<l>    *fwrite_string(FileHandle, ['KNN', 'Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, ', k, ', k])</l>
+<l>    *fwrite_string(FileHandle, ['KNN', ', Accuracy, ', accuracy, ', Precision, ', precision, ', TN, ', count_false_defect_pass, ', FN, ', count_false_defect_fail, ', TP, ', count_true_defect_pass, ', FP, ', count_true_defect_fail, ', k, ', k])</l>
+<l>     fwrite_string(FileHandle, ['KNN', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
+                   ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
+                   ', FP, ', count_true_defect_fail, ', k, ', k])</l>
+<l>    fnew_line(FileHandle)</l>
+<l>    close_file(FileHandle)</l>
+<c></c>
+<l>    clear_class_knn(KNNHandle)                </l>
+<l>endfor</l>
+<c></c>
+<l>dev_open_window (0, 0, 512, 100, 'black', WindowHandle)</l>
+<l>message := 'Completed! Log file is ready.'</l>
+<l>disp_message (WindowHandle, message, 'window', 12, 12, 'black', 'true')</l>
+<c></c>
+<l>stop()</l>
+<c></c>
+<c></c>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="ovst_get_input_folders">
+<interface>
+<ic>
+<par name="FolderDescription" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="InputFolders" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>dev_close_window ()</l>
+<l>windowRatio := 0.5</l>
+<l>dev_open_window (0, 0, 1024*windowRatio, 1024*windowRatio, 'black', WindowHandle)</l>
+<l>set_font (WindowHandle, '-Courier New-15-*-*-*-*-1-')</l>
+<c></c>
+<l>InputFolders := []</l>
+<c></c>
+<l>Done := 0</l>
+<c></c>
+<l>while (Done != 1)</l>
+<l>    set_tposition(WindowHandle, 5*windowRatio, 5*windowRatio )</l>
+<l>    set_color(WindowHandle, 'white')</l>
+<l>    write_string (WindowHandle, FolderDescription)</l>
+<c>    </c>
+<l>    if (InputFolders != [])     </l>
+<l>         set_color(WindowHandle, 'cyan')     </l>
+<l>        tuple_length (InputFolders, NumInputFolders)               </l>
+<l>        for i := 0 to NumInputFolders-1 by 1         </l>
+<l>            set_tposition(WindowHandle, (50 + 30*i)*windowRatio, 20*windowRatio )         </l>
+<l>            FolderElements :=  split(InputFolders[i], '//')         </l>
+<l>            tuple_length (FolderElements, NumFolderElements)                     </l>
+<l>            write_string(WindowHandle, FolderElements[NumFolderElements-1])</l>
+<l>        endfor      </l>
+<l>    endif</l>
+<c>      </c>
+<l>    disp_text_button (WindowHandle, 'Add Input Folder', 'window', 800*windowRatio, 100*windowRatio, 'black', 'green')</l>
+<c>    </c>
+<l>    if (InputFolders != [])</l>
+<l>        disp_text_button (WindowHandle, 'Done', 'window', 800*windowRatio, 600*windowRatio, 'black', 'red')        </l>
+<l>    endif</l>
+<c>    </c>
+<l>    AddButtonPressed := 0</l>
+<l>    DoneButtonPressed := 0</l>
+<c>     </c>
+<l>    while (AddButtonPressed != 1 and DoneButtonPressed != 1)       </l>
+<l>        dev_error_var (Error, 1)</l>
+<l>        dev_set_check ('~give_error')</l>
+<l>        get_mposition (WindowHandle, Row, Column, MouseButton)    </l>
+<c>        </c>
+<l>        dev_error_var (Error, 0)</l>
+<l>        dev_set_check ('give_error')</l>
+<c>        </c>
+<l>        if (Error == H_MSG_TRUE)   </l>
+<l>            if (MouseButton == 1)</l>
+<l>                if ((Row &gt; 800*windowRatio) and (Row &lt; 1000*windowRatio))        </l>
+<l>                    if ((Column &gt; 100*windowRatio) and (Column &lt; 500*windowRatio))</l>
+<l>                        AddButtonPressed := 1</l>
+<l>                    endif                           </l>
+<l>                endif</l>
+<c>                </c>
+<l>                if (InputFolders != [])</l>
+<l>                    if ((Row &gt; 800*windowRatio) and (Row &lt; 1000*windowRatio))        </l>
+<l>                        if ((Column &gt; 600*windowRatio) and (Column &lt; 1000*windowRatio))</l>
+<l>                            DoneButtonPressed := 1                     </l>
+<l>                        endif                           </l>
+<l>                    endif                </l>
+<l>                endif        </l>
+<l>            endif  </l>
+<l>        endif             </l>
+<l>    endwhile</l>
+<c></c>
+<l>    if (AddButtonPressed == 1)</l>
+<l>        dev_open_file_dialog('default','dir','default', NewInputFolder)              </l>
+<l>        tuple_concat (InputFolders, NewInputFolder, InputFolders)      </l>
+<l>    elseif (DoneButtonPressed == 1)</l>
+<l>        Done := 1</l>
+<l>    endif</l>
+<c>    </c>
+<l>endwhile</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="ovst_get_input_folders">
+<parameters>
+<parameter id="FolderDescription"/>
+<parameter id="InputFolders"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="ovst_choose_classifier_type">
+<interface>
+<oc>
+<par name="ClassifierType" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>dev_close_window ()</l>
+<l>dev_open_window (0, 0, 1024, 1024, 'black', WindowHandle)</l>
+<l>set_font (WindowHandle, '-Courier New-15-*-*-*-*-1-')</l>
+<c></c>
+<l>InputFolders := []</l>
+<c></c>
+<l>Done := 0</l>
+<c></c>
+<l>while (Done != 1)</l>
+<l>    set_tposition(WindowHandle, 5, 5 )</l>
+<l>    set_color(WindowHandle, 'white')</l>
+<l>    write_string(WindowHandle, 'Choose Classifier Type')</l>
+<c> </c>
+<l>    disp_text_button (WindowHandle, 'SVM', 'window', 300, 100, 'black', 'gray')</l>
+<l>    disp_text_button (WindowHandle, 'MLP', 'window', 300, 600, 'black', 'gray')    </l>
+<c>   </c>
+<l>    SVMButtonPressed := 0</l>
+<l>    MLPButtonPressed := 0</l>
+<c>     </c>
+<l>    while (SVMButtonPressed != 1 and MLPButtonPressed != 1)       </l>
+<l>        dev_error_var (Error, 1)</l>
+<l>        dev_set_check ('~give_error')</l>
+<l>        get_mposition (WindowHandle, Row, Column, MouseButton)    </l>
+<c>        </c>
+<l>        dev_error_var (Error, 0)</l>
+<l>        dev_set_check ('give_error')</l>
+<c>        </c>
+<l>        if (Error == H_MSG_TRUE)   </l>
+<l>            if (MouseButton == 1)</l>
+<l>                if ((Row &gt; 300) and (Row &lt; 400))        </l>
+<l>                    if ((Column &gt; 100) and (Column &lt; 300))</l>
+<l>                        SVMButtonPressed := 1</l>
+<l>                    endif                           </l>
+<l>                endif</l>
+<c>                </c>
+<l>                if ((Row &gt; 300) and (Row &lt; 400))        </l>
+<l>                    if ((Column &gt; 600) and (Column &lt; 800))</l>
+<l>                        MLPButtonPressed := 1                     </l>
+<l>                    endif                           </l>
+<l>                endif                      </l>
+<l>            endif  </l>
+<l>        endif             </l>
+<l>    endwhile</l>
+<c></c>
+<l>    if (SVMButtonPressed == 1)</l>
+<l>        ClassifierType := ClassifierTypes[0]</l>
+<l>        Done := 1</l>
+<l>    elseif (MLPButtonPressed == 1)</l>
+<l>        ClassifierType := ClassifierTypes[1]        </l>
+<l>        Done := 1</l>
+<l>    endif   </l>
+<l>endwhile</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="ovst_choose_classifier_type">
+<parameters>
+<parameter id="ClassifierType"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="ovst_create_svm_classifier">
+<interface/>
+<body>
+<c></c>
+<l>ClassNames := ['True Defect','False Defect']</l>
+<c></c>
+<l>NuArr := [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]</l>
+<l>tuple_length(NuArr, NuArrLength)</l>
+<l>GammaArr := [0.01, 0.02, 0.05, 0.1, 0.5]</l>
+<l>tuple_length(GammaArr, GammaArrLength)</l>
+<c></c>
+<l>Nu := NuArr[0]</l>
+<l>KernelParam := GammaArr[0]</l>
+<c></c>
+<l>create_class_svm (13, 'rbf', KernelParam, Nu, |ClassNames|, 'one-versus-all', 'normalization', 10, SVMHandle)</l>
+<c></c>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="ovst_create_svm_classifier">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="ovst_add_sample_classifier">
+<interface>
+<ic>
+<par name="ClassifierHandle" base_type="ctrl" dimension="0"/>
+<par name="ImageFolders" base_type="ctrl" dimension="0"/>
+<par name="Class" base_type="ctrl" dimension="0"/>
+<par name="ClassifierType" base_type="ctrl" dimension="0"/>
+<par name="UseHalfSamples" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c></c>
+<c>* Toogle this value to use only half the samples.</c>
+<l>UseSample := 1</l>
+<c></c>
+<l>for i := 0 to |ImageFolders|-1 by 1</l>
+<c></c>
+<l>    list_files (ImageFolders[i], 'directories', ParentDirs)</l>
+<c>     </c>
+<l>    for j := 0 to |ParentDirs|-1 by 1   </l>
+<l>        ImageDir := ParentDirs[j] + 'Crop image and crop hobj'     </l>
+<l>        file_exists (ImageDir, FileExists)</l>
+<c>        </c>
+<l>        if (FileExists == 1)       </l>
+<l>            list_files(ImageDir, 'files', ImageFiles)</l>
+<c>        </c>
+<l>            for k := 0 to |ImageFiles|-1 by 1</l>
+<l>                FileExtension := split(ImageFiles[k], '.')</l>
+<c>           </c>
+<l>                if (FileExtension[|FileExtension|-1] == 'tif')</l>
+<c>                    </c>
+<c>                    * We have the option of training with only half the samples.</c>
+<l>                    if ((UseHalfSamples == 0) or (UseSample == 1))                </l>
+<c>                        * toggle so that we only use half the samples.</c>
+<l>                        if (UseSample == 1)</l>
+<l>                            UseSample := 0</l>
+<l>                        else</l>
+<l>                            UseSample := 1</l>
+<l>                        endif</l>
+<c>                 </c>
+<l>                        ovst_get_template_image(ImageFiles[k], TemplateFile)       </l>
+<l>                        ovst_get_hobj(ImageFiles[k], hObjPath)</l>
+<c>                        </c>
+<l>                        read_image (referenceImage, TemplateFile)</l>
+<l>                        read_image (particleImage, ImageFiles[k])                                                </l>
+<l>                        read_region (estimatedRegion, hObjPath)             </l>
+<c>                        </c>
+<l>                        ovst_find_particle_region_ronnie (referenceImage, particleImage, estimatedRegion, particleRegion)</l>
+<l>                        *ovst_find_particle_region_nut (particleImage, referenceImage, estimatedRegion, particleRegion)</l>
+<c>                        </c>
+<l>                        ovst_calculate_region_features (particleImage, particleRegion, Features)</l>
+<c>                        </c>
+<l>                        switch (ClassifierType)                 </l>
+<l>                            case 1:                     </l>
+<l>                            add_sample_class_svm (ClassifierHandle, Features, Class)</l>
+<l>                            break                </l>
+<l>                            case 2:                     </l>
+<l>                            add_sample_class_mlp (ClassifierHandle, Features, Class)</l>
+<l>                            break                </l>
+<l>                            case 3:                     </l>
+<l>                            add_sample_class_gmm (ClassifierHandle, Features, Class, 0)</l>
+<l>                            break                             </l>
+<l>                            case 4:        </l>
+<l>                            add_sample_class_knn (ClassifierHandle, Features, Class)</l>
+<l>                            break                                                 </l>
+<l>                        endswitch                </l>
+<l>                    endif               </l>
+<l>                endif    </l>
+<l>            endfor</l>
+<l>        endif     </l>
+<l>    endfor    </l>
+<l>endfor</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="ovst_add_sample_classifier">
+<parameters>
+<parameter id="Class"/>
+<parameter id="ClassifierHandle"/>
+<parameter id="ClassifierType"/>
+<parameter id="ImageFolders"/>
+<parameter id="UseHalfSamples"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="ovst_get_template_image">
+<interface>
+<ic>
+<par name="ImagePath" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="TemplatePath" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>ImagePathElements := split(ImagePath, '\\')</l>
+<c></c>
+<l>TemplateDir := ''</l>
+<l>for i := 0 to |ImagePathElements|-3 by 1</l>
+<l>    TemplateDir := TemplateDir + ImagePathElements[i] + '\\'</l>
+<l>endfor</l>
+<l>TemplateDir := TemplateDir + 'Background Image wo defect'</l>
+<c></c>
+<l>ImageFileNameElements := split( ImagePathElements[|ImagePathElements|-1], '_')  </l>
+<c></c>
+<l>TemplateFile := ''</l>
+<l>for i := 0 to |ImageFileNameElements|-2 by 1</l>
+<l>    TemplateFile := TemplateFile + ImageFileNameElements[i] + '_'</l>
+<l>endfor</l>
+<l>TemplateFile := TemplateFile + 'CropImageWoDefect.tif'</l>
+<c></c>
+<l>tuple_strchr (TemplateFile, '(', Position1)</l>
+<l>tuple_strchr (TemplateFile, ')', Position2)</l>
+<c></c>
+<l>if (Position2 &gt; 0)</l>
+<l>    tuple_str_first_n (TemplateFile, Position1-1, Substring1)</l>
+<l>    tuple_str_last_n (TemplateFile, Position2+1, Substring2)</l>
+<l>    TemplateFile := Substring1 + Substring2</l>
+<l>endif</l>
+<c></c>
+<l>TemplatePath := TemplateDir + '\\' + TemplateFile</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="ovst_get_template_image">
+<parameters>
+<parameter id="ImagePath"/>
+<parameter id="TemplatePath"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="ovst_find_particle_region_ronnie">
+<interface>
+<io>
+<par name="referenceImage" base_type="iconic" dimension="0"/>
+<par name="particleImage" base_type="iconic" dimension="0"/>
+<par name="particlePosition" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="particleRegion" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c>* ronnie. Tries to identify the particle. It should draw a region around the particle.</c>
+<c>* This is the one that I eventually used.</c>
+<c></c>
+<l>area_center (particlePosition, ParticleArea, ParticleRow, ParticleColumn)</l>
+<c></c>
+<l>ParticleRow := int(ParticleRow)</l>
+<l>ParticleColumn := int(ParticleColumn)</l>
+<c></c>
+<l>get_image_size (referenceImage, ReferenceImageWidth, ReferenceImageHeight)</l>
+<c></c>
+<c>* Take the absolute difference between the </c>
+<l>abs_diff_image (particleImage, referenceImage, ImageAbsDiff1, 1)</l>
+<l>emphasize (ImageAbsDiff1, ImageEmphasize, ReferenceImageWidth, ReferenceImageHeight, 2)</l>
+<l>median_image (ImageEmphasize, ImageMedian, 'circle', 2, 'mirrored')</l>
+<c></c>
+<c>* Find the lines defined by the reference image. We ignore any difference points that lie inside these lines.</c>
+<l>threshold (referenceImage, thresholdRegion, 100, 255)</l>
+<l>boundary(thresholdRegion, thresholdBoundary, 'inner')</l>
+<l>dilation_circle (thresholdBoundary, RegionDilation, 6.5)</l>
+<c></c>
+<c>* Threshold the difference image.</c>
+<l>hysteresis_threshold (ImageMedian, RegionHysteresis, 80, 120, 50)</l>
+<l>fill_up (RegionHysteresis, RegionFillUp1)</l>
+<c></c>
+<c>* Find the pixels that intersect the lines. Then subtract those.</c>
+<l>intersection (RegionDilation, RegionFillUp1, RegionIntersection)</l>
+<l>difference (RegionHysteresis, RegionIntersection, RegionDifference)</l>
+<c></c>
+<c>* Make the remaining regions bigger so that close regions touch before connecting them.</c>
+<l>dilation_circle (RegionDifference, RegionDilation1, 12.5)</l>
+<l>connection (RegionDilation1, ConnectedRegions)</l>
+<c></c>
+<c>* Find the region that contains the Hobj provided by MTC</c>
+<l>get_region_index (ConnectedRegions, ParticleRow, ParticleColumn, RegionIndex)</l>
+<c></c>
+<c>* Erode the final, remaining region again so that it is a more realistic size.</c>
+<l>gen_empty_region(particleRegion)</l>
+<c></c>
+<l>if (RegionIndex != [])</l>
+<l>    select_obj (ConnectedRegions, ObjectSelected, RegionIndex)  </l>
+<l>    erosion_circle (ObjectSelected, RegionErosion, 9.5)  </l>
+<l>    fill_up (RegionErosion, particleRegion)</l>
+<l>endif</l>
+<c></c>
+<c>* If the area of the region we have just found is smalled than the Hobj provided by MCT then</c>
+<c>* we just use the Hobj instead.</c>
+<l>area_center (particleRegion, particleRegionArea, row, column)</l>
+<c></c>
+<l>if (particleRegionArea &lt; ParticleArea)</l>
+<l>    particleRegion := particlePosition</l>
+<l>endif</l>
+<c></c>
+<l>shape_trans (particleRegion, particleRegion, 'convex')</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="ovst_find_particle_region_ronnie">
+<parameters>
+<parameter id="particleImage"/>
+<parameter id="particlePosition"/>
+<parameter id="particleRegion"/>
+<parameter id="referenceImage"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="ovst_get_hobj">
+<interface>
+<ic>
+<par name="ImagePath" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="hObjFile" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>ImageFileParts := split(ImagePath, '.')</l>
+<l>hObjFile := ImageFileParts[0] + '.hobj'</l>
+<l>return ()</l>
+</body>
+<docu id="ovst_get_hobj">
+<parameters>
+<parameter id="ImagePath"/>
+<parameter id="hObjFile"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="ovst_calculate_region_features">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="Region" base_type="iconic" dimension="0"/>
+</io>
+<oc>
+<par name="Features" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* ronnie. Create a feature vector. This feature vector is just made-up really.</c>
+<c>* I'm sure it is easily possible to come up with something better.</c>
+<c></c>
+<l>*area_center (Image, Area, Row, Column)</l>
+<l>*compactness (Image, Compactness)</l>
+<l>*moments_region_central_invar (Image, PSI1, PSI2, PSI3, PSI4)</l>
+<l>*convexity (Image, Convexity)</l>
+<c></c>
+<l>area_center (Region, Area, Row, Column)</l>
+<l>compactness (Region, Compactness)</l>
+<l>moments_region_central_invar (Region, PSI1, PSI2, PSI3, PSI4)</l>
+<l>convexity (Region, Convexity)</l>
+<c></c>
+<l>cooc_feature_image (Region, Image, 6, 90, Energy, Correlation, Homogeneity, Contrast)</l>
+<c></c>
+<l>*Features := real([Area, Compactness, PSI1, PSI2, PSI3, PSI4, Convexity, Energy, Correlation, Homogeneity, Contrast])</l>
+<c></c>
+<l>Features := []</l>
+<l>Features[0] := Area</l>
+<l>Features[1] := Compactness</l>
+<l>Features[2] := PSI1</l>
+<l>Features[3] := PSI2</l>
+<l>Features[4] := PSI3</l>
+<l>Features[5] := PSI4</l>
+<l>Features[6] := Convexity</l>
+<l>Features[7] := Energy</l>
+<l>Features[8] := Correlation</l>
+<l>Features[9] := Homogeneity</l>
+<l>Features[10] := Contrast</l>
+<c></c>
+<l>Features := real(Features)</l>
+<c></c>
+<l>return ()</l>
+<c></c>
+</body>
+<docu id="ovst_calculate_region_features">
+<parameters>
+<parameter id="Features"/>
+<parameter id="Image"/>
+<parameter id="Region"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="ovst_test_classifier">
+<interface>
+<ic>
+<par name="ClassifierHandle" base_type="ctrl" dimension="0"/>
+<par name="ImageFolders" base_type="ctrl" dimension="0"/>
+<par name="Class" base_type="ctrl" dimension="0"/>
+<par name="ClassifierType" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="PassCount" base_type="ctrl" dimension="0"/>
+<par name="FailCount" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>PassCount := 0</l>
+<l>FailCount := 0 </l>
+<c></c>
+<l>for i := 0 to |ImageFolders|-1 by 1</l>
+<c></c>
+<l>    list_files (ImageFolders[i], 'directories', ParentDirs)</l>
+<c>     </c>
+<l>    for j := 0 to |ParentDirs|-1 by 1   </l>
+<l>        ImageDir := ParentDirs[j] + 'Crop image and crop hobj'    </l>
+<l>        file_exists (ImageDir, FileExists)     </l>
+<l>        if (FileExists == 1)      </l>
+<l>            list_files(ImageDir, 'files', ImageFiles)</l>
+<c>        </c>
+<l>            for k := 0 to |ImageFiles|-1 by 1</l>
+<l>                FileExtension := split(ImageFiles[k], '.')         </l>
+<l>                if (FileExtension[|FileExtension|-1] == 'tif')     </l>
+<l>                    ovst_get_template_image(ImageFiles[k], TemplateFile)       </l>
+<l>                    ovst_get_hobj(ImageFiles[k], hObjPath)</l>
+<c>                    </c>
+<l>                    read_image (referenceImage, TemplateFile)</l>
+<l>                    read_image (particleImage, ImageFiles[k])                                                </l>
+<l>                    read_region (estimatedRegion, hObjPath)             </l>
+<c>                    </c>
+<l>                    ovst_find_particle_region_ronnie (referenceImage, particleImage, estimatedRegion, particleRegion)</l>
+<l>                    *ovst_find_particle_region_nut (particleImage, referenceImage, estimatedRegion, particleRegion)</l>
+<c>                    </c>
+<l>                    ovst_calculate_region_features (particleImage, particleRegion, Features)  </l>
+<c>                    </c>
+<l>                    dev_clear_window()</l>
+<c>                    </c>
+<l>                    dev_display(particleImage)</l>
+<l>                    dev_set_draw('fill')</l>
+<l>                    dev_set_color('red')</l>
+<l>                    dev_display(estimatedRegion)                    </l>
+<l>                    dev_set_draw('margin')</l>
+<l>                    dev_set_color('green')</l>
+<l>                    dev_display(particleRegion)                    </l>
+<c>                 </c>
+<l>                    switch (ClassifierType)</l>
+<l>                    case 1:</l>
+<l>                        classify_class_svm (ClassifierHandle, Features, 1, ChosenClass)</l>
+<l>                        break</l>
+<l>                    case 2:                                      </l>
+<l>                        classify_class_mlp (ClassifierHandle, Features, 1, ChosenClass, Confidence)</l>
+<l>                        break                </l>
+<l>                    case 3:                                      </l>
+<l>                        classify_class_gmm (ClassifierHandle, Features, 1, ChosenClass, ClassProb, Density, KSigmaProb)</l>
+<l>                        break                       </l>
+<l>                    case 4:                                 </l>
+<l>                        classify_class_knn (ClassifierHandle, Features, ChosenClass, Rating)                      </l>
+<l>                        break                                                </l>
+<l>                    endswitch</l>
+<c>                                        </c>
+<l>                    if (ChosenClass == Class)</l>
+<l>                        PassCount := PassCount + 1</l>
+<l>                    else</l>
+<l>                        FailCount := FailCount + 1                                  </l>
+<l>                    endif         </l>
+<l>                endif    </l>
+<l>            endfor   </l>
+<l>        endif    </l>
+<l>    endfor    </l>
+<l>endfor</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="ovst_test_classifier">
+<parameters>
+<parameter id="Class"/>
+<parameter id="ClassifierHandle"/>
+<parameter id="ClassifierType"/>
+<parameter id="FailCount"/>
+<parameter id="ImageFolders"/>
+<parameter id="PassCount"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="ovst_find_particle_region_nut">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+<par name="ImageRef" base_type="iconic" dimension="0"/>
+<par name="DefectRegionIn" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="DefectRegionOut" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c>* </c>
+<c>* ************************** Apply a smoothing filter to the image ******************************</c>
+<l>* gauss_filter (ImageIn, ImageIn_Filtered, 3)</l>
+<l>* gauss_filter (ImageRef, ImageRef_Filtered, 3)</l>
+<l>copy_image (ImageIn, ImageIn_Filtered)</l>
+<l>copy_image (ImageRef, ImageRef_Filtered)</l>
+<c>* </c>
+<c>* </c>
+<c>* ********************* Region Extraction using 2 difference algorithms ***************************</c>
+<c>* Display the input</c>
+<l>dev_set_draw('margin')</l>
+<l>dev_set_color ('red')</l>
+<l>dev_display (ImageIn)</l>
+<l>dev_display (DefectRegionIn)</l>
+<c>* </c>
+<l>Defect_Extraction_Algorithm_1 (ImageIn_Filtered, ImageRef_Filtered, DefectRegionIn, RegionDefectOut_1)</l>
+<l>Defect_Extraction_Algorithm_2 (ImageIn_Filtered, ImageRef_Filtered, DefectRegionIn, RegionDefectOut_2)</l>
+<c>* </c>
+<c>* Combine both resulted regions as "Defect"</c>
+<l>union2 (RegionDefectOut_1, RegionDefectOut_2, RegionDefectOut)</l>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* ********** Customize the region for the better result (erosion, noise filtering etc.) **********</c>
+<c>* If the region is not found. Then, we just use the Hobj instead.</c>
+<l>area_center (RegionDefectOut, Area, row, column)</l>
+<l>if (Area == [])</l>
+<l>    RegionDefectOut := DefectRegionIn</l>
+<l>else</l>
+<c>    * Filter the small regions by using the relative area (compare all areas to its maxima)</c>
+<l>    area_center (RegionDefectOut, DefectArea, Row, Column)</l>
+<l>    connection  (RegionDefectOut, ConnectedRegions)</l>
+<l>    area_center (ConnectedRegions, DefectAreas, Rows, Columns)</l>
+<l>    tuple_max   (DefectAreas, DefectArea_Max)</l>
+<l>    area_threshold := 0.05 * DefectArea_Max</l>
+<l>    select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', area_threshold, 30000)</l>
+<c>    </c>
+<c>    * Erosion</c>
+<l>    min_area_for_erosion := 50</l>
+<l>    if (DefectArea &gt; min_area_for_erosion)</l>
+<l>        erosion_rectangle1 (SelectedRegions, RegionDefectOut, 1, 1)</l>
+<l>    endif</l>
+<c>    * </c>
+<l>    remove_noise_region (RegionDefectOut, RegionDefectOut, 'n_8')</l>
+<l>    connection (RegionDefectOut, ConnectedRegions)</l>
+<l>    select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', 5, 30000)</l>
+<l>    union1 (SelectedRegions, RegionDefectOut)</l>
+<l>endif</l>
+<c></c>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<l>dev_display (ImageIn)</l>
+<l>dev_set_color ('green')</l>
+<l>dev_display (RegionDefectOut_1)</l>
+<l>dev_set_color ('blue')</l>
+<l>dev_display (RegionDefectOut_2)</l>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<l>dev_display (ImageIn)</l>
+<l>dev_set_color ('yellow')</l>
+<l>dev_display (RegionDefectOut)</l>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<l>DefectRegionOut := RegionDefectOut</l>
+<l>return ()</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="ovst_find_particle_region_nut">
+<parameters>
+<parameter id="DefectRegionIn"/>
+<parameter id="DefectRegionOut"/>
+<parameter id="ImageIn"/>
+<parameter id="ImageRef"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Defect_Extraction_Algorithm_1">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+<par name="ImageRef" base_type="iconic" dimension="0"/>
+<par name="RegionRef" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="RegionDefect" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c></c>
+<c>******** Find the signed image (+, -) by subtract the image between "Defect" image and "No Defect" image ***********</c>
+<l>convert_image_type (ImageIn,  ImageConverted1, 'int2')</l>
+<l>convert_image_type (ImageRef, ImageConverted2, 'int2')</l>
+<l>gain := 1.80</l>
+<l>offset := 0</l>
+<l>sub_image (ImageConverted1, ImageConverted2, ImageSub, gain, offset)</l>
+<c></c>
+<l>emphasize (ImageSub, ImageEmphasize, 31, 31, 0.3)</l>
+<l>ImageSub := ImageEmphasize</l>
+<c></c>
+<c>******************************* Find region from using "Double-Threshold" method ***************************************</c>
+<c>* The area(s) which gray-value are crossing over the 2 threshold values (Base + T, Base - T) , will be the output region(s)</c>
+<l>Threshold_BinaryImage := 55</l>
+<l>BaseGrayValue := 120</l>
+<l>dual_threshold (ImageSub, RegionCrossings, 5, BaseGrayValue, Threshold_BinaryImage)</l>
+<c></c>
+<l>dev_set_color ('pink')</l>
+<l>dev_display (ImageIn)</l>
+<l>dev_display (RegionCrossings)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>****************** Filtering a non-defect parts from the resulted XOR image *********************</c>
+<c>* Connecting all the regions to create sub-part regions</c>
+<c>* Calculate for monitoring the features</c>
+<l>connection   (RegionCrossings, ConnectedRegions)</l>
+<l>compactness (ConnectedRegions, Compactness)</l>
+<l>convexity   (ConnectedRegions, Convexity)</l>
+<l>roundness   (ConnectedRegions, Distance, Sigma, Roundness, Sides)</l>
+<l>area_center (ConnectedRegions, Area, Row, Column)</l>
+<c></c>
+<c>* Filtering using "area", "roundness", "convexity" and "compactness"</c>
+<c>* For a large-size defect</c>
+<l>area_largeDefect_threshold := 8000</l>
+<l>select_shape (ConnectedRegions, FilteredRegions_LargeDefect, 'area', 'and', area_largeDefect_threshold, 30000)</l>
+<c>* For a small-size defect </c>
+<l>area_smallDefect_threshold := 8000</l>
+<l>area_min := 15</l>
+<l>area_max := area_smallDefect_threshold - 1000</l>
+<l>roundness_min := 0.6</l>
+<l>roundness_max := 1.0</l>
+<l>compactness_threshold := 17</l>
+<l>convexity_threshold := 0.51</l>
+<l>select_shape (ConnectedRegions, FilteredRegions_Area, 'area', 'and', area_min, area_smallDefect_threshold)</l>
+<l>select_shape (FilteredRegions_Area, FilteredRegions_Area_or_Roundness, ['area', 'roundness'], 'or', [area_min, roundness_min], [area_max, roundness_max])</l>
+<l>select_shape (FilteredRegions_Area_or_Roundness, FilteredRegions_Compactness, 'compactness', 'and' , 0, compactness_threshold)</l>
+<l>select_shape (FilteredRegions_Compactness, FilteredRegions_Convexity, ['area', 'convexity'], 'and', [200, 0], [1500, convexity_threshold])</l>
+<l>difference   (FilteredRegions_Compactness, FilteredRegions_Convexity, FilteredRegions_SmallDefect)</l>
+<c>* Union the small defect and large defect</c>
+<l>union2 (FilteredRegions_SmallDefect, FilteredRegions_LargeDefect, FilteredRegions)</l>
+<c></c>
+<c></c>
+<l>dev_display( ImageIn )</l>
+<l>dev_display( FilteredRegions )</l>
+<c></c>
+<c>* Find a neighbor region of the input .hobj file </c>
+<l>find_neighbors (RegionRef, FilteredRegions, 13, RegionIndex1, RegionIndex2)</l>
+<l>select_obj (FilteredRegions, FilteredRegion, RegionIndex2)</l>
+<c></c>
+<l>dev_display (ImageIn)</l>
+<l>dev_display (FilteredRegion)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>******************** Erosion to eliminate some error from registration ***********************</c>
+<l>area_center (FilteredRegion, DefectArea, Row, Column)</l>
+<l>min_area_for_erosion := 50</l>
+<l>if(DefectArea &gt; min_area_for_erosion)</l>
+<l>    * erosion_circle (FilteredRegion, FilteredRegion, 1.0)</l>
+<l>    erosion_rectangle1 (FilteredRegion, FilteredRegion, 1, 1)</l>
+<l>endif</l>
+<c></c>
+<l>dev_display( ImageIn )</l>
+<l>dev_display( FilteredRegion )</l>
+<c></c>
+<c></c>
+<c></c>
+<l>union1 (FilteredRegion, FilteredRegion)</l>
+<l>RegionDefect := FilteredRegion</l>
+<l>return ()</l>
+<c></c>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="Defect_Extraction_Algorithm_1">
+<parameters>
+<parameter id="ImageIn"/>
+<parameter id="ImageRef"/>
+<parameter id="RegionDefect"/>
+<parameter id="RegionRef"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Defect_Extraction_Algorithm_2">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+<par name="ImageRef" base_type="iconic" dimension="0"/>
+<par name="RegionRef" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="RegionDefect" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c></c>
+<c>*********************** Grayscale-to-Binary by using Single-Threshold method ***********************</c>
+<c>* Find region of gray-value thresholding</c>
+<l>binary_threshold (ImageIn,  RegionThreshold_In,  'smooth_histo', 'dark', UsedThreshold_In)</l>
+<l>binary_threshold (ImageRef, RegionThreshold_Ref, 'smooth_histo', 'dark', UsedThreshold_Ref)</l>
+<c></c>
+<l>threshold (ImageIn,  RegionThreshold_In,  0, UsedThreshold_In  + 10)</l>
+<l>threshold (ImageRef, RegionThreshold_Ref, 0, UsedThreshold_Ref + 10)</l>
+<c></c>
+<c>* Generate Binary Image</c>
+<l>get_image_size   (ImageIn, Width, Height)</l>
+<l>region_to_bin (RegionThreshold_In,  BinImage_In,  0, 255, Width, Height)</l>
+<l>region_to_bin (RegionThreshold_Ref, BinImage_Ref, 0, 255, Width, Height)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>****************** Apply XOR operator between "not defected" &amp; "defected image" ******************</c>
+<c>* XOR output as "image"</c>
+<l>bit_xor (BinImage_In, BinImage_Ref, Image_Xor)</l>
+<c></c>
+<c>* XOR output as "region"</c>
+<c>* There's no XOR set operator. So, try to XOR by using -&gt; (A &amp; !B) || (!A &amp; B)</c>
+<l>copy_obj (RegionThreshold_In,  A, 1, 1)</l>
+<l>copy_obj (RegionThreshold_Ref, B, 1, 1)</l>
+<l>complement (RegionThreshold_In,  A_Complimented)</l>
+<l>complement   (RegionThreshold_Ref, B_Complimented)</l>
+<l>intersection (A, B_Complimented, tmp1)</l>
+<l>intersection (A_Complimented, B, tmp2)</l>
+<l>union2 (tmp1, tmp2, Region_Xor)</l>
+<c></c>
+<l>dev_set_color('orange')</l>
+<l>dev_display (Image_Xor)</l>
+<l>dev_display (Region_Xor)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>****************** Filtering a non-defect parts from the resulted XOR image *********************</c>
+<c>* Connecting all the regions to create sub-part regions </c>
+<l>connection   (Region_Xor, ConnectedRegions)</l>
+<c>* Filtering using "area"</c>
+<l>min_area := 10</l>
+<l>max_area := 2000</l>
+<l>select_shape (ConnectedRegions, FilteredRegions, 'area', 'and', min_area, max_area)</l>
+<c></c>
+<l>* convexity   (ConnectedRegions, Convexity)</l>
+<l>* roundness   (ConnectedRegions, Distance, Sigma, Roundness, Sides)</l>
+<l>* area_center (ConnectedRegions, Area, Row, Column)</l>
+<c></c>
+<l>dev_display( ImageIn )</l>
+<l>dev_display( FilteredRegions )</l>
+<c></c>
+<c>* Find a neighbor region of the input .hobj file </c>
+<l>find_neighbors (RegionRef, FilteredRegions, 1, RegionIndex1, RegionIndex2)</l>
+<l>select_obj (FilteredRegions, FilteredRegion, RegionIndex2)</l>
+<c></c>
+<c></c>
+<c></c>
+<c>******************** Erosion to eliminate some error from registration ***********************</c>
+<l>area_center (FilteredRegion, DefectArea, Row, Column)</l>
+<l>min_area_for_erosion := 60</l>
+<l>if(DefectArea &gt; min_area_for_erosion)</l>
+<l>    * erosion_circle (FilteredRegion, FilteredRegion, 1.0)</l>
+<l>    erosion_rectangle1 (FilteredRegion, FilteredRegion, 1, 1)</l>
+<l>endif</l>
+<c></c>
+<c></c>
+<c></c>
+<l>dev_display (ImageIn)</l>
+<l>dev_display (FilteredRegion)</l>
+<l>RegionDefect := FilteredRegion</l>
+<l>return ()</l>
+<l>return ()</l>
+</body>
+<docu id="Defect_Extraction_Algorithm_2">
+<parameters>
+<parameter id="ImageIn"/>
+<parameter id="ImageRef"/>
+<parameter id="RegionDefect"/>
+<parameter id="RegionRef"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>

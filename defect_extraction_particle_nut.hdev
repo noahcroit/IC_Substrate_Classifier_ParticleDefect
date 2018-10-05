@@ -25,15 +25,16 @@
 <c>******** Find the signed image (+, -) by subtract the image between "Defect" image and "No Defect" image ***********</c>
 <l>convert_image_type (ImageIn,  ImageConverted1, 'int2')</l>
 <l>convert_image_type (ImageRef, ImageConverted2, 'int2')</l>
-<l>gain := 1.8</l>
+<l>gain := 1.80</l>
 <l>offset := 0</l>
 <l>sub_image (ImageConverted1, ImageConverted2, ImageSub, gain, offset)</l>
 <c></c>
-<c></c>
+<l>emphasize (ImageSub, ImageEmphasize, 31, 31, 0.3)</l>
+<l>ImageSub := ImageEmphasize</l>
 <c></c>
 <c>******************************* Find region from using "Double-Threshold" method ***************************************</c>
 <c>* The area(s) which gray-value are crossing over the 2 threshold values (Base + T, Base - T) , will be the output region(s)</c>
-<l>Threshold_BinaryImage := 52</l>
+<l>Threshold_BinaryImage := 55</l>
 <l>BaseGrayValue := 120</l>
 <l>dual_threshold (ImageSub, RegionCrossings, 5, BaseGrayValue, Threshold_BinaryImage)</l>
 <c></c>
@@ -44,29 +45,40 @@
 <c></c>
 <c></c>
 <c>****************** Filtering a non-defect parts from the resulted XOR image *********************</c>
-<c>* Connecting all the regions to create sub-part regions </c>
+<c>* Connecting all the regions to create sub-part regions</c>
+<c>* Calculate for monitoring the features</c>
 <l>connection   (RegionCrossings, ConnectedRegions)</l>
 <l>compactness (ConnectedRegions, Compactness)</l>
 <l>convexity   (ConnectedRegions, Convexity)</l>
 <l>roundness   (ConnectedRegions, Distance, Sigma, Roundness, Sides)</l>
 <l>area_center (ConnectedRegions, Area, Row, Column)</l>
 <c></c>
-<c>* Filtering using "area"</c>
-<l>area_min := 20</l>
-<l>area_max := 7000</l>
+<c>* Filtering using "area", "roundness", "convexity" and "compactness"</c>
+<c>* For a large-size defect</c>
+<l>area_largeDefect_threshold := 8000</l>
+<l>select_shape (ConnectedRegions, FilteredRegions_LargeDefect, 'area', 'and', area_largeDefect_threshold, 30000)</l>
+<c>* For a small-size defect </c>
+<l>area_smallDefect_threshold := 8000</l>
+<l>area_min := 15</l>
+<l>area_max := area_smallDefect_threshold - 1000</l>
 <l>roundness_min := 0.6</l>
 <l>roundness_max := 1.0</l>
-<l>convexity_threshold := 0.55</l>
-<l>select_shape (ConnectedRegions, FilteredRegions_Area, 'area', 'and', area_min, 8000)</l>
+<l>compactness_threshold := 17</l>
+<l>convexity_threshold := 0.51</l>
+<l>select_shape (ConnectedRegions, FilteredRegions_Area, 'area', 'and', area_min, area_smallDefect_threshold)</l>
 <l>select_shape (FilteredRegions_Area, FilteredRegions_Area_or_Roundness, ['area', 'roundness'], 'or', [area_min, roundness_min], [area_max, roundness_max])</l>
-<l>select_shape (FilteredRegions_Area_or_Roundness, FilteredRegions_HoleFalseDetect, ['area', 'convexity'], 'and', [400, 0], [1500, convexity_threshold])</l>
-<l>difference (FilteredRegions_Area_or_Roundness, FilteredRegions_HoleFalseDetect, FilteredRegions)</l>
+<l>select_shape (FilteredRegions_Area_or_Roundness, FilteredRegions_Compactness, 'compactness', 'and' , 0, compactness_threshold)</l>
+<l>select_shape (FilteredRegions_Compactness, FilteredRegions_Convexity, ['area', 'convexity'], 'and', [200, 0], [1500, convexity_threshold])</l>
+<l>difference   (FilteredRegions_Compactness, FilteredRegions_Convexity, FilteredRegions_SmallDefect)</l>
+<c>* Union the small defect and large defect</c>
+<l>union2 (FilteredRegions_SmallDefect, FilteredRegions_LargeDefect, FilteredRegions)</l>
+<c></c>
 <c></c>
 <l>dev_display( ImageIn )</l>
 <l>dev_display( FilteredRegions )</l>
 <c></c>
 <c>* Find a neighbor region of the input .hobj file </c>
-<l>find_neighbors (RegionRef, FilteredRegions, 6, RegionIndex1, RegionIndex2)</l>
+<l>find_neighbors (RegionRef, FilteredRegions, 13, RegionIndex1, RegionIndex2)</l>
 <l>select_obj (FilteredRegions, FilteredRegion, RegionIndex2)</l>
 <c></c>
 <l>dev_display (ImageIn)</l>
@@ -92,6 +104,7 @@
 <l>return ()</l>
 <c></c>
 <c></c>
+<l>return ()</l>
 </body>
 <docu id="Defect_Extraction_Algorithm_1">
 <parameters>
@@ -185,6 +198,7 @@
 <l>dev_display (FilteredRegion)</l>
 <l>RegionDefect := FilteredRegion</l>
 <l>return ()</l>
+<l>return ()</l>
 </body>
 <docu id="Defect_Extraction_Algorithm_2">
 <parameters>
@@ -207,7 +221,21 @@
 </oo>
 </interface>
 <body>
-<c>* </c>
+<c>** Description : </c>
+<c>*</c>
+<c>* This procedure is used for the defect's region extraction and it will call 2 procedures</c>
+<c>* - "Defect_Extraction_Algorithm_1"</c>
+<c>* - "Defect_Extraction_Algorithm_2"</c>
+<c>* These procedures will output its detected region which "Defect_Extraction_Algorithm_1" is good for a large-size defect and "Defect_Extraction_Algorithm_2" is good for a small-size defect.</c>
+<c>* And then, the resulted regions from both algorithm will be combined as a "Defect Region".</c>
+<c></c>
+<c>**************************************************************************************************************************************************</c>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
 <c>* ************************** Apply a smoothing filter to the image ******************************</c>
 <l>* gauss_filter (ImageIn, ImageIn_Filtered, 3)</l>
 <l>* gauss_filter (ImageRef, ImageRef_Filtered, 3)</l>
@@ -217,6 +245,7 @@
 <c>* </c>
 <c>* ********************* Region Extraction using 2 difference algorithms ***************************</c>
 <c>* Display the input</c>
+<l>dev_set_draw('margin')</l>
 <l>dev_set_color ('red')</l>
 <l>dev_display (ImageIn)</l>
 <l>dev_display (DefectRegionIn)</l>
@@ -231,16 +260,31 @@
 <c>* </c>
 <c>* </c>
 <c>* ********** Customize the region for the better result (erosion, noise filtering etc.) **********</c>
-<l>area_center (RegionDefectOut, DefectArea, Row, Column)</l>
-<l>min_area_for_erosion := 80</l>
-<l>if (DefectArea &gt; min_area_for_erosion)</l>
-<l>    erosion_rectangle1 (RegionDefectOut, RegionDefectOut, 2, 2)</l>
+<c>* If the region is not found. Then, we just use the Hobj instead.</c>
+<l>area_center (RegionDefectOut, Area, row, column)</l>
+<l>if (Area == [])</l>
+<l>    RegionDefectOut := DefectRegionIn</l>
+<l>else</l>
+<c>    * Filter the small regions by using the relative area (compare all areas to its maxima)</c>
+<l>    area_center (RegionDefectOut, DefectArea, Row, Column)</l>
+<l>    connection  (RegionDefectOut, ConnectedRegions)</l>
+<l>    area_center (ConnectedRegions, DefectAreas, Rows, Columns)</l>
+<l>    tuple_max   (DefectAreas, DefectArea_Max)</l>
+<l>    area_threshold := 0.05 * DefectArea_Max</l>
+<l>    select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', area_threshold, 30000)</l>
+<c>    </c>
+<c>    * Erosion</c>
+<l>    min_area_for_erosion := 50</l>
+<l>    if (DefectArea &gt; min_area_for_erosion)</l>
+<l>        erosion_rectangle1 (SelectedRegions, RegionDefectOut, 1, 1)</l>
+<l>    endif</l>
+<c>    * </c>
+<l>    remove_noise_region (RegionDefectOut, RegionDefectOut, 'n_8')</l>
+<l>    connection (RegionDefectOut, ConnectedRegions)</l>
+<l>    select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', 5, 30000)</l>
+<l>    union1 (SelectedRegions, RegionDefectOut)</l>
 <l>endif</l>
-<c>* </c>
-<l>remove_noise_region (RegionDefectOut, RegionDefectOut, 'n_8')</l>
-<l>connection (RegionDefectOut, ConnectedRegions)</l>
-<l>select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', 5, 5000)</l>
-<l>union1 (SelectedRegions, RegionDefectOut)</l>
+<c></c>
 <c>* </c>
 <c>* </c>
 <c>* </c>
@@ -254,7 +298,6 @@
 <c>* </c>
 <c>* </c>
 <c>* </c>
-<c>* Display the output</c>
 <l>dev_display (ImageIn)</l>
 <l>dev_set_color ('yellow')</l>
 <l>dev_display (RegionDefectOut)</l>
@@ -262,6 +305,8 @@
 <c>* </c>
 <c>* </c>
 <l>DefectRegionOut := RegionDefectOut</l>
+<l>return ()</l>
+<c></c>
 <l>return ()</l>
 </body>
 <docu id="Find_Defect_Region_ForParticle">

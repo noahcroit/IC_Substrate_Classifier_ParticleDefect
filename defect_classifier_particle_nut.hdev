@@ -43,7 +43,7 @@
 <l>count := 0</l>
 <c></c>
 <c>* Train with only half the available samples.  Set to 0 to train with all samples.</c>
-<l>UseHalfSamples := 1</l>
+<l>UseHalfSamples := 0</l>
 <c></c>
 <l>for i := 0 to |NuArr|-1 by 1</l>
 <l>    for j := 0 to |GammaArr|-1 by 1</l>
@@ -87,8 +87,6 @@
 <l>        precision := TP / (TP + FP)</l>
 <c>        </c>
 <l>        open_file('log.csv', 'append', FileHandle)</l>
-<l>        *fwrite_string(FileHandle, ['SVM', 'Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, ', Nu, ', Nu, ', KernelParam, ', KernelParam])</l>
-<l>        *fwrite_string(FileHandle, ['SVM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', TN, ', count_false_defect_pass, ', FN, ', count_false_defect_fail, ', TP, ', count_true_defect_pass, ', FP, ', count_true_defect_fail, ', Nu, ', Nu, ', KernelParam, ', KernelParam])</l>
 <l>        fwrite_string(FileHandle, ['SVM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
                            ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
                            ', Nu, ', Nu, ', KernelParam, ', KernelParam])</l>
@@ -109,7 +107,7 @@
 <l>count := 0</l>
 <c></c>
 <c>* Train with only half the available samples.  Set to 0 to train with all samples.</c>
-<l>UseHalfSamples := 1</l>
+<l>UseHalfSamples := 0</l>
 <c></c>
 <l>for numInput := 11 to MaxNumInput by 1</l>
 <l>    for numHidden := 3 to MaxNumHidden by 1</l>
@@ -149,10 +147,8 @@
 <l>            accuracy  := (TP + TN) / (TP + TN + FP + FN)</l>
 <l>            precision := TP / (TP + FP)</l>
 <c>            </c>
-<l>            open_file('log.csv', 'append', FileHandle)</l>
-<l>            *fwrite_string(FileHandle, ['MLP', 'Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, ', numInput, ', numInput, ', numHidden, ', numHidden, ', numOuput, ', numOutput])</l>
-<l>            *fwrite_string(FileHandle,  ['MLP', ', Accuracy, ', accuracy, ', Precision, ', precision, ', TN, ', count_false_defect_pass, ', FN, ', count_false_defect_fail, ', TP, ', count_true_defect_pass, ', FP, ', count_true_defect_fail, ', numInput, ', numInput, ', numHidden, ', numHidden, ', numOuput, ', numOutput])</l>
-<l>             fwrite_string(FileHandle, ['MLP', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
+<l>            open_file('log.csv', 'append', FileHandle) </l>
+<l>            fwrite_string(FileHandle, ['MLP', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
                                        ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
                                        ', numInput, ', numInput, ', numHidden, ', numHidden, ', numOuput, ', numOutput])</l>
 <l>            fnew_line(FileHandle)</l>
@@ -213,9 +209,8 @@
 <l>*             precision := TP / (TP + FP)</l>
 <c>            </c>
 <l>*             open_file('log.csv', 'append', FileHandle)</l>
-<l>*             fwrite_string(FileHandle, ['GMM', 'Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, ', numDim, ', numDim, ', numClasses, ', numClasses, ', numCenters, ', numCenters])</l>
-<l>*             fwrite_string(FileHandle, ['GMM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', TN, ', count_false_defect_pass, ', FN, ', count_false_defect_fail, ', TP, ', count_true_defect_pass, ', FP, ', count_true_defect_fail, ', numDim, ', numDim, ', numClasses, ', numClasses, ', numCenters, ', numCenters])</l>
-<l>*               fwrite_string(FileHandle, ['GMM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
+<c>*             </c>
+<l>*              fwrite_string(FileHandle, ['GMM', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
                                          ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
                                          ', numDim, ', numDim, ', numClasses, ', numClasses, ', numCenters, ', numCenters])</l>
 <l>*             fnew_line(FileHandle)</l>
@@ -235,7 +230,7 @@
 <l>count := 0</l>
 <c></c>
 <c>* Train with only half the available samples.  Set to 0 to train with all samples.</c>
-<l>UseHalfSamples := 1</l>
+<l>UseHalfSamples := 0</l>
 <c></c>
 <l>for k := k_min to k_max by 2           </l>
 <c>       </c>
@@ -276,11 +271,9 @@
 <l>    precision := TP / (TP + FP)</l>
 <c>    </c>
 <l>    open_file('log.csv', 'append', FileHandle)</l>
-<l>    *fwrite_string(FileHandle, ['KNN', 'Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, ', k, ', k])</l>
-<l>    *fwrite_string(FileHandle, ['KNN', ', Accuracy, ', accuracy, ', Precision, ', precision, ', TN, ', count_false_defect_pass, ', FN, ', count_false_defect_fail, ', TP, ', count_true_defect_pass, ', FP, ', count_true_defect_fail, ', k, ', k])</l>
-<l>     fwrite_string(FileHandle, ['KNN', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
-                   ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
-                   ', FP, ', count_true_defect_fail, ', k, ', k])</l>
+<l>    fwrite_string(FileHandle, ['KNN', ', Accuracy, ', accuracy, ', Precision, ', precision, ', Count False Defect Pass, ', count_false_defect_pass, ', Count False Defect Fail, \
+                               ', count_false_defect_fail, ', Count True Defect Pass, ', count_true_defect_pass, ', Count True Defect Fail, ', count_true_defect_fail, \
+                               ', FP, ', count_true_defect_fail, ', k, ', k])</l>
 <l>    fnew_line(FileHandle)</l>
 <l>    close_file(FileHandle)</l>
 <c></c>
@@ -528,8 +521,8 @@
 <l>                        read_image (particleImage, ImageFiles[k])                                                </l>
 <l>                        read_region (estimatedRegion, hObjPath)             </l>
 <c>                        </c>
-<l>                        ovst_find_particle_region_ronnie (referenceImage, particleImage, estimatedRegion, particleRegion)</l>
-<l>                        *ovst_find_particle_region_nut (particleImage, referenceImage, estimatedRegion, particleRegion)</l>
+<l>                        *ovst_find_particle_region_ronnie (referenceImage, particleImage, estimatedRegion, particleRegion)</l>
+<l>                        ovst_find_particle_region_nut (particleImage, referenceImage, estimatedRegion, particleRegion)</l>
 <c>                        </c>
 <l>                        ovst_calculate_region_features (particleImage, particleRegion, Features)</l>
 <c>                        </c>
@@ -801,8 +794,8 @@
 <l>                    read_image (particleImage, ImageFiles[k])                                                </l>
 <l>                    read_region (estimatedRegion, hObjPath)             </l>
 <c>                    </c>
-<l>                    ovst_find_particle_region_ronnie (referenceImage, particleImage, estimatedRegion, particleRegion)</l>
-<l>                    *ovst_find_particle_region_nut (particleImage, referenceImage, estimatedRegion, particleRegion)</l>
+<l>                    *ovst_find_particle_region_ronnie (referenceImage, particleImage, estimatedRegion, particleRegion)</l>
+<l>                    ovst_find_particle_region_nut (particleImage, referenceImage, estimatedRegion, particleRegion)</l>
 <c>                    </c>
 <l>                    ovst_calculate_region_features (particleImage, particleRegion, Features)  </l>
 <c>                    </c>
@@ -867,7 +860,21 @@
 </oo>
 </interface>
 <body>
-<c>* </c>
+<c>** Description : </c>
+<c>*</c>
+<c>* This procedure is used for the defect's region extraction and it will call 2 procedures</c>
+<c>* - "Defect_Extraction_Algorithm_1"</c>
+<c>* - "Defect_Extraction_Algorithm_2"</c>
+<c>* These procedures will output its detected region which "Defect_Extraction_Algorithm_1" is good for a large-size defect and "Defect_Extraction_Algorithm_2" is good for a small-size defect.</c>
+<c>* And then, the resulted regions from both algorithm will be combined as a "Defect Region".</c>
+<c></c>
+<c>**************************************************************************************************************************************************</c>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
 <c>* ************************** Apply a smoothing filter to the image ******************************</c>
 <l>* gauss_filter (ImageIn, ImageIn_Filtered, 3)</l>
 <l>* gauss_filter (ImageRef, ImageRef_Filtered, 3)</l>

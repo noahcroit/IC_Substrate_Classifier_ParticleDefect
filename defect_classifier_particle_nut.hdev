@@ -52,7 +52,7 @@
 <l>        KernelParam := GammaArr[j]</l>
 <c>                 </c>
 <c>        * create the classifier</c>
-<l>        create_class_svm (number_of_features, 'rbf', KernelParam, Nu, |ClassNames|, 'one-versus-all', 'principal_components', 10, SVMHandle)</l>
+<l>        create_class_svm (number_of_features, 'rbf', KernelParam, Nu, |ClassNames|, 'one-versus-all', 'normalization', 10, SVMHandle)</l>
 <c>        </c>
 <c>        * Add samples of false defects</c>
 <l>        ovst_add_sample_classifier (SVMHandle, FalseInputFolders, 0, ClassifierSVM, UseHalfSamples)</l>
@@ -113,7 +113,7 @@
 <l>    for numHidden := 3 to MaxNumHidden by 1</l>
 <l>        for numOutput := 2 to MaxNumOutput by 1            </l>
 <c>            * create the classifier</c>
-<l>            create_class_mlp (numInput, numHidden, numOutput, 'softmax', 'principal_components', 11, 42, MLPHandle)</l>
+<l>            create_class_mlp (numInput, numHidden, numOutput, 'softmax', 'normalization', 11, 42, MLPHandle)</l>
 <c>            </c>
 <c>            * Add samples of false defects</c>
 <l>            ovst_add_sample_classifier (MLPHandle, FalseInputFolders, 0, ClassifierMLP, UseHalfSamples)</l>
@@ -862,16 +862,13 @@
 <body>
 <c>** Description : </c>
 <c>*</c>
-<c>* This procedure is used for the defect's region extraction and it will call 2 procedures</c>
+<c>* This procedure is used for the defect's region extraction (Particle-type defect) and it will call 2 procedures</c>
 <c>* - "Defect_Extraction_Algorithm_1"</c>
 <c>* - "Defect_Extraction_Algorithm_2"</c>
 <c>* These procedures will output its detected region which "Defect_Extraction_Algorithm_1" is good for a large-size defect and "Defect_Extraction_Algorithm_2" is good for a small-size defect.</c>
 <c>* And then, the resulted regions from both algorithm will be combined as a "Defect Region".</c>
 <c></c>
 <c>**************************************************************************************************************************************************</c>
-<c></c>
-<c></c>
-<c></c>
 <c></c>
 <c></c>
 <c></c>

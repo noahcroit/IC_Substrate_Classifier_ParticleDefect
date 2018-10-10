@@ -223,7 +223,7 @@
 <body>
 <c>** Description : </c>
 <c>*</c>
-<c>* This procedure is used for the defect's region extraction and it will call 2 procedures</c>
+<c>* This procedure is used for the defect's region extraction (Particle-type defect) and it will call 2 procedures</c>
 <c>* - "Defect_Extraction_Algorithm_1"</c>
 <c>* - "Defect_Extraction_Algorithm_2"</c>
 <c>* These procedures will output its detected region which "Defect_Extraction_Algorithm_1" is good for a large-size defect and "Defect_Extraction_Algorithm_2" is good for a small-size defect.</c>
